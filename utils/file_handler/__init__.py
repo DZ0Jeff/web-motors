@@ -3,23 +3,23 @@ import pandas as pd
 import os
 
 
-def remove_duplicates():
+def remove_duplicates_txt():
     print('Terminado! Verificando se existe linhas duplicadas...')
     lines_seen = set()
-    with open('profiles.txt', "w") as output_file:
-        for each_line in open('raw_profile.txt', "r"):
+    with open('links_sanlitized.txt', "w") as output_file:
+        for each_line in open('links.txt', "r"):
             if each_line not in lines_seen:  # check if line is not duplicate
                 output_file.write(each_line)
                 lines_seen.add(each_line)
 
+    os.remove('links.txt')
     print('Terminado! link duplicados removidos')
 
 
 def save_to_json(data, filename):
     print('Salvando os dados em JSON')
     with open(f'{filename}.json', 'w', encoding='utf-8') as file:
-        json.dump(data, file, ensure_ascii=False)
-
+        json.dump(data, file, ensure_ascii=False, indent=4)
 
 
 def load_links(file_text):
@@ -51,7 +51,6 @@ def load_json(json_name):
 def save_to_html(data):
     with open('coment.html', 'w', encoding='utf8') as file:
         file.write(str(data))
-
 
 
 def dataToExcel(dataDict, filename):

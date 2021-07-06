@@ -7,7 +7,7 @@ def scroll(driver):
     # Get scroll height
     last_height = driver.execute_script("return document.body.scrollHeight")
 
-    time = 0
+    # time = 0
     while True:
         # Scroll down to bottom
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
@@ -22,10 +22,10 @@ def scroll(driver):
             break
         last_height = new_height
 
-        time += 1
+        # time += 1
 
-        if time >= 100:
-            break
+        # if time >= 100:
+        #     break
 
 
 def dynamic_page(driver, url):
