@@ -1,17 +1,7 @@
-# scrapper-boilerplate
+# web-motors crawler
 
+Scrape data from web motors and deliver csv file
 
-Scrapping tools for making easy for further scrapping
-
-provides:
-
-1 - proxy handler for ip rotation
-
-2 - automatic user-agent
-
-3 - output files (Json, Excel, Csv)
-
-4 - avoid bot detection
 
 ## Instalation
 ------
