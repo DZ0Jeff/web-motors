@@ -37,7 +37,7 @@ def getCarsByLink():
             link = f"https://www.webmotors.com.br/comprar/{make}/{model}/{version}/{ports}/{year}/{id}"
             cars_link.append(link)
         
-        print(f"{len(cars_link)} Extraídos")
+        # print(f"{len(cars_link)} Extraídos", end="\r")
         return cars_link
 
     # save_to_json(req.json(),'cars')
@@ -58,8 +58,13 @@ def getCarsByLink():
         with open('links.txt','a') as file:
             for link in links:
                 file.write(f'{link}\n')
-        
+
+        print(f'{i} páginas extraídas!', end="\r")
+
         i += 1
+
+        if not "SearchResults" in data or len(data["SearchResults"]) == 0:
+            break
 
     remove_duplicates_txt()
 
