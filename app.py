@@ -8,7 +8,7 @@ from time import sleep
 import requests
 import os
 
-from selenium.common.exceptions import ElementClickInterceptedException, NoSuchElementException
+from selenium.common.exceptions import ElementClickInterceptedException, NoSuchElementException, JavascriptException
 
 
 def get_tag(soap, tag, attribute):
@@ -73,8 +73,8 @@ def getCarsByLink():
         if not "SearchResults" in data or len(data["SearchResults"]) == 0:
             break
 
-        if i < 10:
-            break
+        # if i < 10:
+        #     break
 
     remove_duplicates_txt()
 
@@ -85,7 +85,8 @@ def getDetails(url):
         driver.get(url)
         verbose('> Esperando página carregar...')
         driver.implicitly_wait(10)
-        
+
+        remove_cookie_warning(driver)
         button_exists = True
         try:
             # click no botão para mostrar telefone
@@ -93,11 +94,13 @@ def getDetails(url):
             driver.find_element_by_id('CardSellerPhoneViewPrivate').click()
         
         except ElementClickInterceptedException:
+            # se existe um pop up remove-lo
             verbose('> tentando remover popup se existe...')
             remove_popups(driver)
             driver.find_element_by_id('CardSellerPhoneViewPrivate').click()
             
         except NoSuchElementException:
+            # continua se o botão não existe
             verbose('> Informações não achadas! continuando...')
             button_exists = False
             pass
@@ -105,6 +108,7 @@ def getDetails(url):
         finally:
             sleep(5)
 
+        # extrair telefone se o botão existe
         if button_exists:
             time = 0
             while True :
@@ -143,17 +147,17 @@ def getDetails(url):
         data['Unico dono?'] = [get_tag(soap, 'strong', 'VehicleCharacteristicPos2')]
         data['Licenciado?'] = [get_tag(soap, 'strong', 'VehicleCharacteristicPos1')]
 
-        # data['Items'] = soap.find('ul', class_='VehicleDetails__list VehicleDetails__list--items').get_text(separator=" ")
+        data['Items'] = soap.find('ul', class_='VehicleDetails__list VehicleDetails__list--items').get_text(separator=" ")
 
-        data['Nome'] = soap.find('h2', id="VehicleSellerInformationName").text
+        data['Nome'] = [soap.find('h2', id="VehicleSellerInformationName").text]
         try:
-            data['Telefone'] = soap.find('strong', id="VehicleSellerInformationPhone_0").text
+            data['Telefone'] = [soap.find('strong', id="VehicleSellerInformationPhone_0").text]
 
         except AttributeError:
-            data['Telefone'] = 'Não existete'
+            data['Telefone'] = ['Não existete']
 
-        data['Estado'] = soap.find('span', id="VehicleSellerInformationState").text
-        # data['Tipo de pessoa'] = soap.find('p', id="VehicleSellerPrivateTypeAd").text
+        data['Estado'] = [soap.find('span', id="VehicleSellerInformationState").text]
+        data['Link'] = [url.replace('\n','')]
 
         print('\n')
         for key, value in data.items():
@@ -166,9 +170,10 @@ def getDetails(url):
         verbose('> Saindo volte sempre...')
         driver.quit()
 
-    except Exception:
+    except Exception as error:
         driver.quit()
-        raise
+        print(f'> {error}')
+        return
 
 
 def getCars(driver):
@@ -202,28 +207,16 @@ def parse_results(driver):
 def remove_popups(driver):
     try:
         print('> Removendo Popup')
-        modal_container = driver.find_element_by_css_selector('.sc-bdVaJa.bjRMar')
-        modal_container.find_element_by_css_selector('.--close-modal').click()
+        modal = driver.find_element_by_xpath('//*[@id="root"]/div[4]/div[2]/div/div[1]/img')
+        modal.click()
         # driver.find_element_by_css_selector('img.--close-modal').click()
 
     except NoSuchElementException:
-        try:
-            print('> 1 método falhou, a testar o segundo!')
-            sleep(5)
-            driver.execute_script("""
-                return document.querySelector(".sc-bdVaJa.bjRMar").remove(); 
-            """)
+        print('Unable to get modal')
 
-        except ElementClickInterceptedException:
-            print('> 2 método falhou, a testar o segundo!')
-            sleep(5)
-            driver.execute_script("""
-                return document.querySelector(".sc-gZMcBi.huEwZw").remove(); 
-            """)
 
-    finally:
-        # driver.find_element_by_css_selector('.sc-htoDjs.gtMZoW').click()
-        pass
+def remove_cookie_warning(driver):
+    driver.find_element_by_css_selector('.sc-htoDjs.gtMZoW').click()
 
 
 def main():
