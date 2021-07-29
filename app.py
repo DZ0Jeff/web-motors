@@ -6,8 +6,18 @@ from utils.parser_handler import init_parser, remove_duplicates, init_crawler
 from utils.file_handler import dataToExcel, load_links, remove_duplicates_txt, save_to_json
 from time import sleep
 import requests
+import os
 
 from selenium.common.exceptions import ElementClickInterceptedException, NoSuchElementException
+
+
+def get_tag(soap, tag, attribute):
+    try:
+        text_tag = soap.find(tag, id=attribute).get_text()
+        return text_tag
+
+    except AttributeError:
+        return ''
 
 
 def verbose(text):
@@ -40,9 +50,6 @@ def getCarsByLink():
         # print(f"{len(cars_link)} Extraídos", end="\r")
         return cars_link
 
-    # save_to_json(req.json(),'cars')
-    # with open('cars.json', encoding="utf-8") as file:
-    #     data = json.load(file)
     
     i = 1
     while True:
@@ -64,6 +71,9 @@ def getCarsByLink():
         i += 1
 
         if not "SearchResults" in data or len(data["SearchResults"]) == 0:
+            break
+
+        if i < 10:
             break
 
     remove_duplicates_txt()
@@ -104,7 +114,7 @@ def getDetails(url):
                     break
 
                 try:
-                    driver.find_element_by_id('VehicleSellerPrivatePhone_0')
+                    driver.find_element_by_id('VehicleSellerInformationPhone_0')
                 
                 except NoSuchElementException:
                     sleep(5)
@@ -120,22 +130,37 @@ def getDetails(url):
         driver.quit()
 
         data = {}
-        data['Nome'] = soap.find('h2', id="VehicleSellerPrivateName").text
+
+        data['Modelo'] = [get_tag(soap, 'h1', "VehicleBasicInformationTitle")]
+        data['Ano'] = [get_tag(soap, 'strong', "VehiclePrincipalInformationYear")]
+        data['KM'] = [get_tag(soap, 'strong','VehiclePrincipalInformatiOnodometer')]
+        data['Câmbio'] = [get_tag(soap, 'strong', 'VehiclePrincipalInformationTransmission')]
+        data['Chassis'] = [get_tag(soap, 'strong', 'VehiclePrincipalInformationBodyType')]
+        data['Combustível'] = [get_tag(soap, 'strong', "VehiclePrincipalInformationFuel")]
+        data['Troca?'] = [get_tag(soap, 'strong','VehiclePrincipalInformationFuel')]
+        data['Final da placa'] = [get_tag(soap, 'strong', 'VehiclePrincipalInformationFinalPlate')]
+        data['Cor'] = [get_tag(soap, 'strong', 'VehiclePrincipalInformationColor')]
+        data['Unico dono?'] = [get_tag(soap, 'strong', 'VehicleCharacteristicPos2')]
+        data['Licenciado?'] = [get_tag(soap, 'strong', 'VehicleCharacteristicPos1')]
+
+        # data['Items'] = soap.find('ul', class_='VehicleDetails__list VehicleDetails__list--items').get_text(separator=" ")
+
+        data['Nome'] = soap.find('h2', id="VehicleSellerInformationName").text
         try:
-            data['Telefone'] = soap.find('strong', id="VehicleSellerPrivatePhone_0").text
+            data['Telefone'] = soap.find('strong', id="VehicleSellerInformationPhone_0").text
 
         except AttributeError:
             data['Telefone'] = 'Não existete'
 
-        data['Estado'] = soap.find('span', id="VehicleSellerPrivateState").text
-        data['Tipo de pessoa'] = soap.find('p', id="VehicleSellerPrivateTypeAd").text
+        data['Estado'] = soap.find('span', id="VehicleSellerInformationState").text
+        # data['Tipo de pessoa'] = soap.find('p', id="VehicleSellerPrivateTypeAd").text
 
         print('\n')
         for key, value in data.items():
             print(f'> {key}: {value}')
         print('\n')
 
-        dataToExcel({ 'Nome': [data['Nome']], 'Telefone': [data['Telefone']], 'Estado': [data['Estado']], 'Tipo de pessoa': [data['Tipo de pessoa']] }, 'web-motors.csv')
+        dataToExcel(data, 'web-motors.csv')
 
     except KeyboardInterrupt:
         verbose('> Saindo volte sempre...')
@@ -175,9 +200,30 @@ def parse_results(driver):
 
 
 def remove_popups(driver):
-    driver.find_element_by_css_selector('.modal--close').click()
-    sleep(3)
-    driver.find_element_by_css_selector('.sc-htoDjs.gtMZoW').click()
+    try:
+        print('> Removendo Popup')
+        modal_container = driver.find_element_by_css_selector('.sc-bdVaJa.bjRMar')
+        modal_container.find_element_by_css_selector('.--close-modal').click()
+        # driver.find_element_by_css_selector('img.--close-modal').click()
+
+    except NoSuchElementException:
+        try:
+            print('> 1 método falhou, a testar o segundo!')
+            sleep(5)
+            driver.execute_script("""
+                return document.querySelector(".sc-bdVaJa.bjRMar").remove(); 
+            """)
+
+        except ElementClickInterceptedException:
+            print('> 2 método falhou, a testar o segundo!')
+            sleep(5)
+            driver.execute_script("""
+                return document.querySelector(".sc-gZMcBi.huEwZw").remove(); 
+            """)
+
+    finally:
+        # driver.find_element_by_css_selector('.sc-htoDjs.gtMZoW').click()
+        pass
 
 
 def main():
@@ -189,13 +235,14 @@ def main():
     print('~' *40)
 
     getCarsByLink()
-    links = load_links('links_sanlitized')
+    links = load_links('links_sanitized')
     
     print(f"{len(links)} links encontrados!")
     for index, link in enumerate(links):
         print(f'Extraíndo {index} de {len(links)}')
         getDetails(link)
 
+    os.remove('links_sanitized.txt')
 
 if __name__ == "__main__":
     main()

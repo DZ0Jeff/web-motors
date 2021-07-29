@@ -3,10 +3,10 @@ import pandas as pd
 import os
 
 
-def remove_duplicates_txt():
+def remove_duplicates_txt(name='links_sanitized.txt'):
     print('Terminado! Verificando se existe linhas duplicadas...')
     lines_seen = set()
-    with open('links_sanlitized.txt', "w") as output_file:
+    with open(name, "w") as output_file:
         for each_line in open('links.txt', "r"):
             if each_line not in lines_seen:  # check if line is not duplicate
                 output_file.write(each_line)
