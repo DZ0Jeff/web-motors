@@ -3,7 +3,7 @@ import requests
 from utils.webdriver_handler import scroll
 from utils.setup import setSelenium
 from utils.parser_handler import init_parser, remove_duplicates, init_crawler
-from utils.file_handler import dataToExcel, load_links, remove_duplicates_txt, save_to_json
+from utils.file_handler import dataToExcel, load_index, load_links, remove_duplicates_txt, save_index, save_to_json
 from time import sleep
 import requests
 import os
@@ -20,6 +20,15 @@ def get_tag(soap, tag, attribute):
         return ''
 
 
+def get_tag_class(soap, tag, attribute):
+    try:
+        text_tag = soap.find(tag, class_=attribute).get_text()
+        return text_tag
+
+    except AttributeError:
+        return ''
+
+
 def verbose(text):
     verbose = True
     if verbose:
@@ -29,7 +38,10 @@ def verbose(text):
 def getCarsByLink():
     def make_requests(actualPage):
         limit = 24
-        req = requests.get(f'https://www.webmotors.com.br/api/search/car?url=https://www.webmotors.com.br/carros%2Festoque%3F&actualPage={actualPage}&displayPerPage={limit}&order=1&showMenu=true&showCount=true&showBreadCrumb=true&testAB=false&returnUrl=false')
+        url = f'https://www.webmotors.com.br/api/search/car?url=https://www.webmotors.com.br/carros%2Festoque%3F&actualPage={actualPage}&displayPerPage={limit}&order=1&showMenu=true&showCount=true&showBreadCrumb=true&testAB=false&returnUrl=false'
+        url_filtro = f"https://www.webmotors.com.br/api/search/car?url=https://www.webmotors.com.br/carros%2Festoque%3Ftipoveiculo%3Dcarros%26precode%3D100000%26anunciante%3DPessoa%2520F%25C3%25ADsica&actualPage={actualPage}&displayPerPage={limit}&order=1&showMenu=true&showCount=true&showBreadCrumb=true&testAB=false&returnUrl=false"
+        
+        req = requests.get(url_filtro)
 
         return req
 
@@ -53,6 +65,7 @@ def getCarsByLink():
     
     i = 1
     while True:
+        
         try:
             req = make_requests(i)
         
@@ -73,7 +86,7 @@ def getCarsByLink():
         if not "SearchResults" in data or len(data["SearchResults"]) == 0:
             break
 
-        # if i < 10:
+        # if i < 5:
         #     break
 
     remove_duplicates_txt()
@@ -90,7 +103,7 @@ def getDetails(url):
         button_exists = True
         try:
             # click no botão para mostrar telefone
-            verbose('> 1 Click no botão do telefone')
+            verbose('> Clicando no botão do telefone')
             driver.find_element_by_id('CardSellerPhoneViewPrivate').click()
         
         except ElementClickInterceptedException:
@@ -112,13 +125,13 @@ def getDetails(url):
         if button_exists:
             time = 0
             while True :
-                verbose('> verificando se o botão esta carregando...')
+                print('> verificando se o botão esta carregando...', end="\r")
                 if time >= 10:
-                    print('> Erro de rede ou não existe!')
+                    verbose('> Erro de rede ou não existe!')
                     break
 
                 try:
-                    driver.find_element_by_id('VehicleSellerInformationPhone_0')
+                    driver.find_element_by_css_selector('.CardSeller__phone__number.CardSeller__phone__number--active')
                 
                 except NoSuchElementException:
                     sleep(5)
@@ -135,6 +148,7 @@ def getDetails(url):
 
         data = {}
 
+        data['Preço'] = [get_tag(soap, 'strong', 'vehicleSendProposalPrice')]
         data['Modelo'] = [get_tag(soap, 'h1', "VehicleBasicInformationTitle")]
         data['Ano'] = [get_tag(soap, 'strong', "VehiclePrincipalInformationYear")]
         data['KM'] = [get_tag(soap, 'strong','VehiclePrincipalInformatiOnodometer')]
@@ -146,34 +160,32 @@ def getDetails(url):
         data['Cor'] = [get_tag(soap, 'strong', 'VehiclePrincipalInformationColor')]
         data['Unico dono?'] = [get_tag(soap, 'strong', 'VehicleCharacteristicPos2')]
         data['Licenciado?'] = [get_tag(soap, 'strong', 'VehicleCharacteristicPos1')]
-
-        data['Items'] = soap.find('ul', class_='VehicleDetails__list VehicleDetails__list--items').get_text(separator=" ")
-
-        data['Nome'] = [soap.find('h2', id="VehicleSellerInformationName").text]
         try:
-            data['Telefone'] = [soap.find('strong', id="VehicleSellerInformationPhone_0").text]
-
+            data['Items'] = [soap.find('ul', class_='VehicleDetails__list VehicleDetails__list--items').get_text(separator=" ")]
+        
         except AttributeError:
-            data['Telefone'] = ['Não existete']
+            data['Items'] = ""
 
-        data['Estado'] = [soap.find('span', id="VehicleSellerInformationState").text]
+        data['Nome'] = get_tag(soap, 'h2', 'VehicleSellerPrivateName')
+        data['Telefone'] = get_tag_class(soap, 'strong', 'CardSeller__phone__number CardSeller__phone__number--active')
+        data['Estado'] = get_tag(soap, 'span', 'VehicleSellerPrivateState')
         data['Link'] = [url.replace('\n','')]
 
-        print('\n')
-        for key, value in data.items():
-            print(f'> {key}: {value}')
-        print('\n')
+        # print('\n')
+        # for key, value in data.items():
+        #     print(f'> {key}: {value}')
+        # print('\n')
 
         dataToExcel(data, 'web-motors.csv')
 
     except KeyboardInterrupt:
         verbose('> Saindo volte sempre...')
         driver.quit()
+        exit()
 
     except Exception as error:
         driver.quit()
         print(f'> {error}')
-        return
 
 
 def getCars(driver):
@@ -232,10 +244,14 @@ def main():
     
     print(f"{len(links)} links encontrados!")
     for index, link in enumerate(links):
-        print(f'Extraíndo {index} de {len(links)}')
-        getDetails(link)
+        saved_index = load_index()
+        if index <= int(index):
+            print(f'Extraíndo {index} de {len(links)}')
+            getDetails(link)
+            save_index(index)
 
     os.remove('links_sanitized.txt')
+    os.remove('index.txt')
 
 if __name__ == "__main__":
     main()

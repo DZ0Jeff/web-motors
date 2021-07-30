@@ -36,7 +36,7 @@ def setSelenium(console=True, proxy=False):
     prefs = {"profile.default_content_setting_values.notifications": 2}
     chrome_options.add_experimental_option("prefs", prefs)
 
-    path = resource_path("C:\Selenium\chromedriver.exe")
+    path = resource_path("./chromedriver")
 
     if proxy:
         PROXY = init_proxy(path)

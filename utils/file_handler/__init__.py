@@ -56,3 +56,19 @@ def save_to_html(data):
 def dataToExcel(dataDict, filename):
     df = pd.DataFrame(dataDict)
     df.to_csv(filename, mode="a", index=False, header=not os.path.exists(filename))
+
+
+def save_index(index):
+    with open('index.txt','w') as file:
+        file.write(str(index))
+
+
+def load_index():
+    try:
+        with open('index.txt') as file:
+            data = file.read()
+        
+        return data
+    
+    except FileNotFoundError:
+        save_index(0)
