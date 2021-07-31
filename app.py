@@ -92,9 +92,8 @@ def getCarsByLink():
     remove_duplicates_txt()
 
 
-def getDetails(url):
+def getDetails(driver, url):
     try:
-        driver = setSelenium(False)
         driver.get(url)
         verbose('> Esperando página carregar...')
         driver.implicitly_wait(10)
@@ -144,7 +143,6 @@ def getDetails(url):
 
         verbose('> Raspando dados...')
         soap = parse_results(driver)
-        driver.quit()
 
         data = {}
 
@@ -178,14 +176,10 @@ def getDetails(url):
 
         dataToExcel(data, 'web-motors.csv')
 
-    except KeyboardInterrupt:
-        verbose('> Saindo volte sempre...')
-        driver.quit()
-        exit()
-
     except Exception as error:
         driver.quit()
         print(f'> {error}')
+        raise
 
 
 def getCars(driver):
@@ -224,11 +218,24 @@ def remove_popups(driver):
         # driver.find_element_by_css_selector('img.--close-modal').click()
 
     except NoSuchElementException:
-        print('Unable to get modal')
+        try:
+            modal = driver.find_element_by_xpath('//*[@id="root"]/div[4]/div[2]/div/div[1]')
+            modal.click()
+
+        except Exception:
+            print('Unable to get modal')
 
 
 def remove_cookie_warning(driver):
-    driver.find_element_by_css_selector('.sc-htoDjs.gtMZoW').click()
+    try:
+        driver.find_element_by_css_selector('.sc-htoDjs.gtMZoW').click()
+    
+    except ElementClickInterceptedException:
+        remove_popups(driver)
+        driver.find_element_by_css_selector('.sc-htoDjs.gtMZoW').click()
+
+    except Exception:
+        pass
 
 
 def main():
@@ -242,13 +249,28 @@ def main():
     getCarsByLink()
     links = load_links('links_sanitized')
     
-    print(f"{len(links)} links encontrados!")
-    for index, link in enumerate(links):
-        saved_index = load_index()
-        if index <= int(index):
-            print(f'Extraíndo {index} de {len(links)}')
-            getDetails(link)
-            save_index(index)
+    print(f"> {len(links)} links encontrados!")
+    driver = setSelenium(False)
+    try:
+        for index, link in enumerate(links):
+            saved_index = load_index()
+            if index >= int(saved_index):
+                print(f'> Extraíndo {index} de {len(links)}')
+                getDetails(driver, link)
+                save_index(index)
+
+                if index % 1000 == 0:
+                    driver.quit()
+                    sleep(3600)
+                    driver = setSelenium(False)
+        
+        driver.quit()
+        print('> Finalizado!')
+
+    except KeyboardInterrupt:
+        verbose('> Saindo volte sempre...')
+        driver.quit()
+        exit()
 
     os.remove('links_sanitized.txt')
     os.remove('index.txt')
