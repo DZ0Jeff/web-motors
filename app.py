@@ -86,8 +86,8 @@ def getCarsByLink():
         if not "SearchResults" in data or len(data["SearchResults"]) == 0:
             break
 
-        # if i < 5:
-        #     break
+        if i < 5:
+            break
 
     remove_duplicates_txt()
 
@@ -246,7 +246,9 @@ def main():
     print(str('Web Motors crawler').center(40))
     print('~' *40)
 
-    getCarsByLink()
+    if not os.path.exists('links_sanitized.txt'):
+        getCarsByLink()
+    
     links = load_links('links_sanitized')
     
     print(f"> {len(links)} links encontrados!")
