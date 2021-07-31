@@ -64,11 +64,15 @@ def save_index(index):
 
 
 def load_index():
-    try:
+    def load():
         with open('index.txt') as file:
             data = file.read()
         
         return data
+
+    try:
+        return load()
     
     except FileNotFoundError:
         save_index(0)
+        return load()

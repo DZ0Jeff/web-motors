@@ -253,13 +253,12 @@ def main():
     driver = setSelenium(False)
     try:
         for index, link in enumerate(links):
-            saved_index = load_index()
-            if index >= int(saved_index):
+            if index >= int(load_index()):
                 print(f'> Extraíndo {index} de {len(links)}')
                 getDetails(driver, link)
                 save_index(index)
 
-                if index % 1000 == 0:
+                if index != 0 and index % 1000 == 0:
                     driver.quit()
                     print('> Esperando 1 hora...')
                     sleep(3600)
