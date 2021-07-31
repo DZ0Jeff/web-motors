@@ -86,8 +86,8 @@ def getCarsByLink():
         if not "SearchResults" in data or len(data["SearchResults"]) == 0:
             break
 
-        if i < 5:
-            break
+        # if i < 5:
+        #     break
 
     remove_duplicates_txt()
 
