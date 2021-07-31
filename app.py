@@ -261,6 +261,7 @@ def main():
 
                 if index % 1000 == 0:
                     driver.quit()
+                    print('> Esperando 1 hora...')
                     sleep(3600)
                     driver = setSelenium(False)
         
